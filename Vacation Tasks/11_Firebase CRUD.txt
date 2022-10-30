@@ -1,0 +1,143 @@
+import 'dart:convert';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  var app = await Firebase.initializeApp();
+  runApp(MyApp(app));
+
+}
+
+class MyApp extends StatelessWidget {
+  var app;
+  MyApp(this.app);
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: MyHomePage(app),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  var app;
+  MyHomePage(this.app);
+  @override
+  _MyHomePageState createState() => _MyHomePageState(app);
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  var app;
+  _MyHomePageState(this.app);
+  FirebaseDatabase? database;
+  DatabaseReference? todoReference;
+  int updateIndex = 0;
+
+
+  List<List<String>> todo = <List<String>>[];
+  var _todoController = TextEditingController();
+  String operation = "Add";
+  @override
+  Widget build(BuildContext context) {
+    database = FirebaseDatabase(app:app);
+    todoReference = database?.reference().child("todos");
+
+    return Scaffold(
+        appBar: AppBar(
+          title: Text("Home"),
+        ),
+        body: Column(
+          children: [
+            Row(
+              children: [
+                SizedBox(width: 300,child: TextField(controller: _todoController,)),
+                Expanded(child: ElevatedButton(onPressed: (){
+                  if(operation == "Add"){
+                    add(_todoController.text);
+                  }
+                  else{
+                    update(_todoController.text,updateIndex);
+                    operation = "Add";
+                  }
+                  _todoController.text = "";
+                }, child: Text(operation)))
+              ],
+            ),
+
+            FutureBuilder(
+              future: todoReference?.once(),
+              builder: (context,AsyncSnapshot<DatabaseEvent> snapshot){
+                if(snapshot.hasData){
+                  todo.clear();
+                  var values = snapshot.requireData.snapshot.children;
+                  values.forEach((element) {
+                    var a = jsonEncode(element.value);
+                    var b = jsonDecode(a);
+                    List<String> data = [b["todo"],b["id"]];
+                    todo.add(data);
+                  });
+                }
+                return Expanded(
+                  child: ListView.builder(itemCount: todo.length,itemBuilder: (BuildContext context,int index){
+                    return Card(
+                      child: ListTile(
+                        title: Text(todo[index][0]),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children:[
+                            GestureDetector(onTap: (){
+                              setState((){
+                                operation = "Update";
+                                _todoController.text = todo[index][0];
+                                updateIndex = index;
+                              });
+                            },child: Icon(Icons.edit,color: Colors.blue,)),
+                            SizedBox(width: 10.0,),
+                            GestureDetector(onTap: (){
+                              delete(index);
+                            },child: Icon(Icons.delete,color: Colors.red,)),
+                          ]
+                      ),
+                      ),
+                    );
+                  }),
+                );
+              },
+
+            )
+          ],
+        )
+      // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  void add(String todo) async {
+    String? key = todoReference?.push().key;
+    setState((){
+      todoReference?.child(key!).set({
+        "id":key,"todo":todo
+      });
+    });
+  }
+
+  void delete(int index) async {
+    setState((){
+      todoReference?.child(todo[index][1]).remove();
+    });
+  }
+
+  void update(String newTodo,int index) async {
+    setState((){
+      todoReference?.child(todo[index][1]).update({"id":todo[index][1],"todo":newTodo});
+      updateIndex = 0;
+    });
+
+  }
+}
