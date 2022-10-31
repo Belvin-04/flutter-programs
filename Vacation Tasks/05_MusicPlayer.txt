@@ -1,0 +1,203 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:volume_control/volume_control.dart';
+import 'package:flutter_media_metadata/flutter_media_metadata.dart';
+
+void main(){
+  runApp(MaterialApp(home: Home(),));
+}
+
+class Home extends StatefulWidget {
+  const Home({Key? key}) : super(key: key);
+
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+  @override
+  Widget build(BuildContext context) {
+    checkPermission();
+    Directory d = Directory("/storage/emulated/0/Songs/");
+    var songsList = d.listSync();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Music Player"),
+      ),
+      body: ListView.builder(itemCount: songsList.length,itemBuilder: (context,int index){
+        String songName = songsList[index].path;
+        songName = songName.substring(songName.lastIndexOf("/")+1,songName.indexOf("."));
+        return Card(
+          child: GestureDetector(onTap: (){
+            Navigator.push(context, MaterialPageRoute(builder: (context)=>MyScreen(songsList[index].path)));
+          },
+            child: ListTile(
+              leading: Icon(Icons.play_arrow,size: 35.0,),
+              title: Text(songName),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  void checkPermission() async {
+    var status = await Permission.storage.status;
+    if (status.isDenied) {
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.storage,
+      ].request();
+
+      status = await Permission.storage.status;
+
+      if(status.isDenied){
+        showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context){
+              return AlertDialog(
+                content: Text("Now you have to manually grant permission from settings..."),
+                actions: [
+                  TextButton(child: Text("OK"),onPressed: (){
+                    exit(0);
+                  },),
+                ],
+              );
+            }
+        );
+      }
+    }
+  }
+  
+}
+
+
+
+class MyScreen extends StatefulWidget {
+  final String songPath;
+  MyScreen(this.songPath);
+
+  @override
+  State<MyScreen> createState() => _MyScreenState();
+}
+class _MyScreenState extends State<MyScreen> {
+  var audioPlayer = AudioPlayer();
+
+  Duration _duration = Duration();
+  Duration _position = Duration();
+
+  String operation = "Play";
+  double currentVolume = 0.1;
+
+  @override
+
+  Widget build(BuildContext context) {
+    checkPermission();
+
+    audioPlayer.onPositionChanged.listen((event) {
+      setState((){
+        _position = event;
+      });
+    });
+
+    audioPlayer.onDurationChanged.listen((event) {
+      setState((){
+        _duration = event;
+      });
+    });
+
+    return Scaffold(
+        appBar: AppBar(title: Text("Music Player"),),
+        body: Column(children: [
+          Center(child: Image.asset("assets/images/image.jpg")),
+          Row(
+            children: [
+              SizedBox(width: 100.0,),
+              ElevatedButton(onPressed: () async {
+                if(operation == "Play"){
+                  await audioPlayer.play(DeviceFileSource(widget.songPath));
+                  setState((){
+                    operation = "Pause";
+                  });
+                }
+                else if(operation == "Pause"){
+                  await audioPlayer.pause();
+                  setState((){
+                    operation = "Resume";
+                  });
+                }
+                else if(operation == "Resume"){
+                  await audioPlayer.resume();
+                  setState((){
+                    operation = "Pause";
+                  });
+                }
+              }, child: Text(operation)),
+              ElevatedButton(onPressed: () async{
+                await audioPlayer.stop();
+                setState((){
+                  operation = "Play";
+                });
+              }, child: Text("Stop"))
+            ],
+          ),
+          Row(
+            children: [
+              SizedBox(width: 10.0,),
+              Text("Volume"),
+              Expanded(
+                child: Slider(value: currentVolume,max: 1.0,divisions: 10, onChanged: (value){
+                  VolumeControl.setVolume(value);
+                  setState((){
+                    currentVolume = value;
+                  });
+                }),
+              ),
+            ],
+          ),
+          Slider.adaptive(
+            onChanged: (double value) {
+              setState(() {
+                audioPlayer.seek(Duration(seconds: value.toInt()));
+              });
+            },
+            min: 0.0,
+            max: _duration.inSeconds.toDouble(),
+            value: _position.inSeconds.toDouble(),
+          ),
+        ],)
+    );
+  }
+
+  void checkPermission() async {
+    var status = await Permission.storage.status;
+    if (status.isDenied) {
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.storage,
+      ].request();
+
+      status = await Permission.storage.status;
+
+      if(status.isDenied){
+        showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context){
+              return AlertDialog(
+                content: Text("Now you have to manually grant permission from settings..."),
+                actions: [
+                  TextButton(child: Text("OK"),onPressed: (){
+                    exit(0);
+                  },),
+                ],
+              );
+            }
+        );
+      }
+    }
+  }
+
+}
