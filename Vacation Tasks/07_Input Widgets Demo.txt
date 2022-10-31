@@ -1,0 +1,269 @@
+import 'package:flutter/material.dart';
+
+enum status {On,Off}
+
+void main() async {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: MyHomePage(),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  DateTime selectedDate = DateTime.now();
+  TimeOfDay selectedTime = TimeOfDay.now();
+  TextEditingController titleController = TextEditingController();
+  status _status = status.On;
+  double volume = 0.0;
+  bool switchValue = false;
+  var checkboxValues = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+  var checkboxIsChecked = [false,false,false,false,false,false,false];
+  String dateString = "";
+  String timeString = "";
+  @override
+  initState(){
+    dateString = selectedDate.day.toString()+"/"+selectedDate.month.toString()+"/"+selectedDate.year.toString();
+    timeString = selectedTime.hour.toString()+":"+selectedTime.minute.toString();
+  }
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title: Text("Home"),
+        ),
+        body: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Column(children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                    labelText: "Title", border: OutlineInputBorder()),
+              ),
+              Row(
+                children: [
+                  Radio(value: status.On, groupValue: _status, onChanged: (status? value){
+                    setState((){
+                      _status = value!;
+                    });
+                  }),
+                  Text("On"),
+                  Radio(value: status.Off, groupValue: _status, onChanged: (status? value){
+                    setState((){
+                      _status = value!;
+                    });
+                  }),
+                  Text("Off")
+                ],
+              ),
+              Row(
+                children: [
+                  Text("Date: "),
+                  RaisedButton(
+                    onPressed: () => _selectDate(context),
+                    child: Text(dateString),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Text("Time: "),
+                  RaisedButton(
+                    onPressed: () => _selectTime(context),
+                    child: Text(timeString),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Text("Volume: "),
+                  Slider(value: volume,max: 10.0,divisions: 11 ,onChanged: (value){
+                    setState((){
+                      volume = value;
+                    });
+                  }),
+                  Text(volume.toInt().toString()),
+                ],
+              ),
+              Row(
+                children: [
+                  Text("Repeat: "),
+                  Switch(value: switchValue, onChanged: (value){
+                    setState((){
+                      switchValue = value;
+                    });
+                  })
+                ],
+              ),
+              Visibility(
+                visible: switchValue,
+                child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Checkbox(value: checkboxIsChecked[0], onChanged: (value){
+                        setState((){
+                          checkboxIsChecked[0] = value!;
+                        });
+
+                      }),
+                      Text(checkboxValues[0]),
+                      Checkbox(value: checkboxIsChecked[1], onChanged: (value){
+                        setState((){
+                          checkboxIsChecked[1] = value!;
+                        });
+
+                      }),
+                      Text(checkboxValues[1]),
+                      Checkbox(value: checkboxIsChecked[2], onChanged: (value){
+                        setState((){
+                          checkboxIsChecked[2] = value!;
+                        });
+
+                      }),
+                      Text(checkboxValues[2]),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Checkbox(value: checkboxIsChecked[3], onChanged: (value){
+                        setState((){
+                          checkboxIsChecked[3] = value!;
+                        });
+
+                      }),
+                      Text(checkboxValues[3]),
+                      Checkbox(value: checkboxIsChecked[4], onChanged: (value){
+                        setState((){
+                          checkboxIsChecked[4] = value!;
+                        });
+
+                      }),
+                      Text(checkboxValues[4]),
+                      Checkbox(value: checkboxIsChecked[5], onChanged: (value){
+                        setState((){
+                          checkboxIsChecked[5] = value!;
+                        });
+
+                      }),
+                      Text(checkboxValues[5]),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Checkbox(value: checkboxIsChecked[6], onChanged: (value){
+                        setState((){
+                          checkboxIsChecked[6] = value!;
+                        });
+
+                      }),
+                      Text(checkboxValues[6]),
+                    ],
+                  ),
+                ],
+              ),),
+              ElevatedButton(onPressed: (){
+                showMyDialog(context: context);
+              }, child: Text("Submit"))
+            ]))
+        // This trailing comma makes auto-formatting nicer for build methods.
+        );
+  }
+
+  Future<void> _selectDate(BuildContext context) async{
+    final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: selectedDate,
+        firstDate: DateTime(2015, 8),
+        lastDate: DateTime(2101));
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+        dateString = selectedDate.day.toString()+"/"+selectedDate.month.toString()+"/"+selectedDate.year.toString();
+      });
+    }
+  }
+
+  Future<void> _selectTime(BuildContext context) async {
+    TimeOfDay? selectedTime24Hour = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 10, minute: 47),
+      builder: (BuildContext context, Widget? child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        );
+      },
+    );
+    setState((){
+      selectedTime = selectedTime24Hour!;
+      timeString = selectedTime.hour.toString()+":"+selectedTime.minute.toString();
+    });
+  }
+
+  Future<void> showMyDialog({required BuildContext context}) async{
+    return showDialog<void>(
+      context:context,
+      barrierDismissible: false,
+      builder: (BuildContext context){
+        return AlertDialog(
+          title: Text("Alarm Details"),
+          content: SingleChildScrollView(
+            child: getDataWithWidgets()
+          ),
+          actions: [
+            TextButton(onPressed: (){
+              Navigator.of(context).pop();
+            }, child: Text("OK"))
+          ],
+        );
+      }
+    );
+  }
+
+  Widget getDataWithWidgets(){
+    String alarmStatus = "Off";
+    if(_status == status.On){
+      alarmStatus = "On";
+    }
+
+    var widgetList = [
+      Text("Alarm Status: "+alarmStatus),
+      Text("Alarm Title: "+titleController.text),
+      Text("Date: "+dateString),
+      Text("Time: "+timeString),
+      Text("Volume: "+volume.toInt().toString()),
+      Text("Repeat: "+switchValue.toString()),
+    ];
+
+    if(switchValue){
+      var days = "";
+      for(int i = 0; i<checkboxIsChecked.length; i++){
+        if(checkboxIsChecked[i]){
+          days += checkboxValues[i]+",";
+        }
+      }
+      days = days.substring(0,days.length-1);
+      widgetList.add(Text("Repeat Days: "+days));
+    }
+
+    var w =ListBody(
+      children: widgetList,
+    );
+
+    return w;
+  }
+}
